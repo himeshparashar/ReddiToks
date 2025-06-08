@@ -127,20 +127,28 @@ export class GenerateVideoUseCase {
       /^https?:\/\/(www\.)?reddit\.com\/r\/\w+\/comments\/\w+/;
     return redditUrlPattern.test(url);
   }
-
   async getProgress(scriptId: string): Promise<VideoGenerationProgress> {
-    // TODO: Implement progress tracking across all services
-    throw new Error("Progress tracking not implemented yet");
+    // Mock implementation - return fake progress data
+    console.log(`Getting progress for script: ${scriptId}`);
+
+    return {
+      scriptId: scriptId,
+      currentStep: "render",
+      stepProgress: 85,
+      overallProgress: 85,
+      estimatedTimeRemaining: 30,
+      message: "Rendering video... Almost done!",
+    };
   }
 
   async cancelGeneration(scriptId: string): Promise<void> {
-    // TODO: Implement cancellation across all services
+    // Mock implementation - simulate cancellation
     console.log(`Cancelling video generation for script: ${scriptId}`);
 
     // Cancel ongoing operations in each service
     await this.remotionService.cancelRender(scriptId);
 
-    throw new Error("Generation cancellation not implemented yet");
+    console.log(`Video generation cancelled for script: ${scriptId}`);
   }
 }
 

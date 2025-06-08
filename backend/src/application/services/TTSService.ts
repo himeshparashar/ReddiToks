@@ -24,32 +24,35 @@ export class TTSService implements TTSServiceInterface {
     private apiKey: string,
     private provider: "elevenlabs" | "playht" | "bark" = "elevenlabs"
   ) {}
-
   async generateAudioForScript(script: ScriptEntity): Promise<ScriptEntity> {
     console.log(`Generating audio for script: ${script.id}`);
 
-    // TODO: Implement TTS generation for entire script
-    // 1. Process each dialogue line
-    // 2. Generate audio files
-    // 3. Store files locally or in S3
-    // 4. Update script with audio file paths and timing
+    // Mock implementation - simulate TTS generation
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    throw new Error("TTSService.generateAudioForScript not implemented yet");
+    const updatedLines = script.lines.map((line, index) => ({
+      ...line,
+      audioFilePath: `/audio/${script.id}_line_${index}.mp3`,
+      duration: Math.random() * 3 + 2, // Random duration between 2-5 seconds
+    }));
 
-    // Mock implementation structure:
-    // const updatedLines = await Promise.all(
-    //   script.lines.map(async (line, index) => {
-    //     const audioPath = await this.generateAudioForLine(line);
-    //     const duration = await this.getAudioDuration(audioPath);
-    //     return {
-    //       ...line,
-    //       audioFilePath: audioPath,
-    //       duration: duration
-    //     };
-    //   })
-    // );
-    //
-    // return new ScriptEntity(script.id, updatedLines, script.background, script.characters);
+    // Calculate start times based on durations
+    let currentTime = 0;
+    const linesWithTiming = updatedLines.map((line) => {
+      const lineWithStartTime = {
+        ...line,
+        startTime: currentTime,
+      };
+      currentTime += line.duration + 0.5; // Add 0.5s pause between lines
+      return lineWithStartTime;
+    });
+
+    return new ScriptEntity(
+      script.id,
+      linesWithTiming,
+      script.background,
+      script.characters
+    );
   }
 
   async generateAudioForLine(line: DialogueLine): Promise<string> {
@@ -60,12 +63,11 @@ export class TTSService implements TTSServiceInterface {
       )}...`
     );
 
-    // TODO: Implement individual line TTS generation
-    // 1. Call TTS API (ElevenLabs/PlayHT/Bark)
-    // 2. Save audio file to temp directory
-    // 3. Return file path
-
-    throw new Error("TTSService.generateAudioForLine not implemented yet");
+    // Mock implementation - return fake audio file path
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return `/audio/mock_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}.mp3`;
   }
 
   private async callTTSAPI(

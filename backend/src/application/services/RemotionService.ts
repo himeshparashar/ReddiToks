@@ -2,6 +2,10 @@ import { ScriptEntity } from "../../domain/entities/Script";
 
 export interface RemotionServiceInterface {
   renderVideo(script: ScriptEntity): Promise<string>;
+  getRenderStatus(
+    scriptId: string
+  ): Promise<"pending" | "rendering" | "completed" | "failed">;
+  cancelRender(scriptId: string): Promise<void>;
 }
 
 export interface RenderOptions {
@@ -23,23 +27,17 @@ export class RemotionService implements RemotionServiceInterface {
     private tempDir: string = "./temp",
     private publicDir: string = "./public"
   ) {}
-
   async renderVideo(script: ScriptEntity): Promise<string> {
     console.log(`Rendering video for script: ${script.id}`);
 
-    // TODO: Implement Remotion video rendering
-    // 1. Write script.json to temp directory
-    // 2. Invoke Remotion CLI or Node renderMedia API
-    // 3. Monitor rendering progress
-    // 4. Return final video file path
+    // Mock implementation - simulate video rendering
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    throw new Error("RemotionService.renderVideo not implemented yet");
+    // Mock video file path
+    const videoPath = `/videos/${script.id}_final.mp4`;
 
-    // Mock implementation structure:
-    // const scriptJsonPath = await this.writeScriptJson(script);
-    // const videoPath = await this.executeRemotionRender(script.id, scriptJsonPath);
-    // await this.cleanup(script.id);
-    // return videoPath;
+    console.log(`Video rendering completed: ${videoPath}`);
+    return videoPath;
   }
 
   private async writeScriptJson(script: ScriptEntity): Promise<string> {
@@ -136,16 +134,17 @@ export class RemotionService implements RemotionServiceInterface {
 
     return publicVideoPath;
   }
-
   async getRenderStatus(
     scriptId: string
   ): Promise<"pending" | "rendering" | "completed" | "failed"> {
-    // TODO: Implement render status tracking
-    throw new Error("Render status tracking not implemented yet");
+    // Mock implementation - return completed status
+    console.log(`Getting render status for script: ${scriptId}`);
+    return "completed";
   }
 
   async cancelRender(scriptId: string): Promise<void> {
-    // TODO: Implement render cancellation
-    throw new Error("Render cancellation not implemented yet");
+    // Mock implementation - simulate cancellation
+    console.log(`Cancelling render for script: ${scriptId}`);
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 }

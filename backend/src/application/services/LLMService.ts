@@ -22,25 +22,69 @@ export interface LLMResponse {
 
 export class LLMService implements LLMServiceInterface {
   constructor(private apiKey: string, private model: string = "gpt-4") {}
-
   async generateStructuredScript(
     rawThread: RawThreadData
   ): Promise<ScriptEntity> {
     console.log(`Generating structured script for thread: ${rawThread.title}`);
 
-    // TODO: Implement LLM integration (OpenAI API or local LLM)
-    // 1. Create prompt from rawThread
-    // 2. Call LLM API
-    // 3. Parse response into Script format
-    // 4. Map thread into DialogueLine[]
+    // Mock implementation - returning fake script data
+    // Simulate LLM processing delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    throw new Error("LLMService.generateStructuredScript not implemented yet");
+    const mockScript = ScriptEntity.create({
+      lines: [
+        {
+          speaker: "Narrator",
+          text: "Welcome to another episode of Reddit Stories. Today we're diving into a relationship drama from r/AmItheAsshole.",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+        {
+          speaker: "OP",
+          text: rawThread.content.substring(0, 150) + "...",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+        {
+          speaker: "Narrator",
+          text: "Let's see what the Reddit community had to say about this situation.",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+        {
+          speaker: "Commenter1",
+          text:
+            rawThread.comments[0]?.content ||
+            "This is a complex situation that requires careful consideration.",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+        {
+          speaker: "Commenter2",
+          text:
+            rawThread.comments[1]?.content ||
+            "I think there's more to this story than meets the eye.",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+        {
+          speaker: "Narrator",
+          text: "What do you think? Let us know in the comments below!",
+          audioFilePath: "",
+          startTime: 0,
+          duration: 0,
+        },
+      ],
+      background: "minecraft-parkour",
+      characters: ["narrator", "op", "commenter1", "commenter2"],
+    });
 
-    // Mock implementation structure:
-    // const prompt = this.buildPrompt(rawThread);
-    // const response = await this.callLLM(prompt);
-    // const parsedScript = this.parseScriptResponse(response);
-    // return ScriptEntity.create(parsedScript);
+    return mockScript;
   }
 
   private buildPrompt(rawThread: RawThreadData): string {
