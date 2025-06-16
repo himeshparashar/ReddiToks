@@ -72,6 +72,7 @@ export class ElevenLabsClient {
           use_speaker_boost: true,
         },
       };
+
       const response = await axios.post(url, payload, {
         headers: {
           Accept: "audio/mpeg",
@@ -105,6 +106,7 @@ export class ElevenLabsClient {
       throw new Error(`Failed to generate speech: ${error.message}`);
     }
   }
+
   async getAvailableVoices(): Promise<ElevenLabsVoice[]> {
     try {
       await this.enforceRateLimit();
@@ -131,30 +133,23 @@ export class ElevenLabsClient {
 
       const url = `${this.baseUrl}/user`;
 
-      const response = await fetch(url, {
-        method: "GET",
+      const response = await axios.get(url, {
         headers: {
           Accept: "application/json",
           "xi-api-key": this.config.apiKey,
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(
-          `ElevenLabs API error: ${response.status} - ${errorText}`
-        );
-      }
-      const data = (await response.json()) as any;
+      const data = response.data;
       return {
         character_count: data.subscription?.character_count || 0,
         character_limit: data.subscription?.character_limit || 10000,
         can_extend_character_limit:
           data.subscription?.can_extend_character_limit || false,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching user info:", error);
-      throw new Error(`Failed to fetch user info: ${error}`);
+      throw new Error(`Failed to fetch user info: ${error.message}`);
     }
   }
 
