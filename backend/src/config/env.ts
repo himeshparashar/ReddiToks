@@ -16,6 +16,10 @@ interface Config {
       apiKey: string;
       model: string;
     };
+    gemini: {
+      apiKey: string;
+      model: string;
+    };
     elevenlabs: {
       apiKey: string;
     };
@@ -46,6 +50,10 @@ const config: Config = {
       apiKey: process.env.OPENAI_API_KEY || "",
       model: process.env.OPENAI_MODEL || "gpt-4",
     },
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY || "",
+      model: process.env.GEMINI_MODEL || "gemini-2.0-flash",
+    },
     elevenlabs: {
       apiKey: process.env.ELEVENLABS_API_KEY || "",
     },
@@ -66,7 +74,7 @@ const config: Config = {
 
 // Validation function
 export function validateConfig(): void {
-  const requiredEnvVars = ["OPENAI_API_KEY", "ELEVENLABS_API_KEY"];
+  const requiredEnvVars = ["GEMINI_API_KEY", "ELEVENLABS_API_KEY"];
 
   const missingVars = requiredEnvVars.filter(
     (varName) => !process.env[varName]
