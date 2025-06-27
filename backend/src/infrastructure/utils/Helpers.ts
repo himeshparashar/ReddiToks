@@ -54,7 +54,7 @@ export function retry<T>(
   delayMs: number = 1000
 ): Promise<T> {
   return new Promise(async (resolve, reject) => {
-    let lastError: any = new Error("Unknown error");
+    let lastError: Error = new Error("Unknown error occurred");
 
     for (let i = 0; i <= maxRetries; i++) {
       try {

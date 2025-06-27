@@ -2,7 +2,7 @@ import { ScriptEntity, DialogueLine } from "../../domain/entities/Script";
 import {
   ElevenLabsClient,
   ElevenLabsConfig,
-} from "../../infrastructure/ai/ElevenLabsClient";
+} from "../../infrastructure/ai/ElevenLabsClientClean";
 import * as fs from "fs-extra";
 import * as path from "path";
 import config from "../../config/env";
@@ -45,6 +45,7 @@ export class TTSService implements TTSServiceInterface {
     this.elevenLabsClient = new ElevenLabsClient({ apiKey: key || "mock-key" });
     this.audioOutputDir = config.storage.tempDir;
   }
+
   async generateAudioForScript(script: ScriptEntity): Promise<ScriptEntity> {
     console.log(`🎵 Generating audio for script: ${script.id}`);
 
@@ -93,7 +94,7 @@ export class TTSService implements TTSServiceInterface {
 
         try {
           // Generate audio for this line
-          const audioFilePath = await this.generateAudioForLine(
+          const audioFilePath = await this.generateAudioForLineReal(
             line,
             script.id,
             i
@@ -144,11 +145,7 @@ export class TTSService implements TTSServiceInterface {
     }
   }
 
-  async generateAudioForLine(
-    line: DialogueLine,
-    scriptId?: string,
-    lineIndex?: number
-  ): Promise<string> {
+  async generateAudioForLine(line: DialogueLine): Promise<string> {
     console.log(
       `🎤 Generating audio for line: ${line.speaker} - ${line.text.substring(
         0,
@@ -156,17 +153,23 @@ export class TTSService implements TTSServiceInterface {
       )}...`
     );
 
+    // Mock implementation - return fake audio file path
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return `/audio/mock_${Date.now()}_${Math.random()
+      .toString(36)
+      .substr(2, 9)}.mp3`;
+  }
+
+  private async generateAudioForLineReal(
+    line: DialogueLine,
+    scriptId: string,
+    lineIndex: number
+  ): Promise<string> {
     try {
+      // Get voice for this speaker
       const voiceId = this.elevenLabsClient.getVoiceForCharacter(line.speaker);
 
-      // Check text length for free tier
-      if (line.text.length > 1000) {
-        console.warn(
-          `⚠️ Text too long for free tier (${line.text.length} chars), truncating...`
-        );
-        line.text = line.text.substring(0, 1000);
-      }
-
+      // Generate audio with ElevenLabs
       const audioBuffer = await this.elevenLabsClient.generateSpeech(
         {
           text: line.text,
@@ -176,33 +179,22 @@ export class TTSService implements TTSServiceInterface {
       );
 
       // Save audio file
-      const fileName = `${scriptId || "line"}_${lineIndex || Date.now()}.mp3`;
-      const audioDir = path.join(
-        this.audioOutputDir,
-        scriptId || "temp",
-        "audio"
-      );
-      await fs.ensureDir(audioDir);
-
+      const fileName = `${scriptId}_line_${lineIndex}.mp3`;
+      const audioDir = path.join(this.audioOutputDir, scriptId, "audio");
       const filePath = path.join(audioDir, fileName);
+
       await fs.writeFile(filePath, audioBuffer);
 
-      console.log(`✅ Saved audio file: ${filePath}`);
+      console.log(`✅ Saved audio file: ${fileName}`);
       return filePath;
     } catch (error) {
-      console.error(`❌ Failed to generate audio for line: ${error}`);
-      // Return mock path as fallback
-      return `/audio/mock_${scriptId || "line"}_${lineIndex || Date.now()}.mp3`;
+      console.error(`❌ Failed to generate real audio: ${error}`);
+      throw error;
     }
   }
 
-  // Mock implementation for fallback
-  private async generateMockAudioForScript(
-    script: ScriptEntity
-  ): Promise<ScriptEntity> {
-    console.log("🎭 Using mock audio generation");
-
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate processing
+  private generateMockAudioForScript(script: ScriptEntity): ScriptEntity {
+    console.log("🎭 Generating mock audio for script");
 
     const updatedLines = script.lines.map((line, index) => ({
       ...line,
@@ -229,12 +221,18 @@ export class TTSService implements TTSServiceInterface {
     );
   }
 
-  // Estimate audio duration based on text length and speaking rate
   private estimateAudioDuration(text: string): number {
-    const wordsPerMinute = 150; // Average speaking rate
+    // Rough estimation: average speaking speed is about 150 words per minute
+    // That's about 2.5 words per second
     const words = text.split(" ").length;
-    const minutes = words / wordsPerMinute;
-    const seconds = minutes * 60;
-    return Math.max(1, Math.round(seconds * 10) / 10); // Minimum 1 second, rounded to 1 decimal
+    const wordsPerSecond = 2.5;
+    const estimatedDuration = words / wordsPerSecond;
+
+    // Minimum duration of 1 second, maximum of 10 seconds per line
+    return Math.max(1, Math.min(10, estimatedDuration));
+  }
+
+  private getVoiceForSpeaker(speaker: string): string {
+    return this.elevenLabsClient.getVoiceForCharacter(speaker);
   }
 }

@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios from 'axios';
 
 export interface ElevenLabsConfig {
   apiKey: string;
@@ -31,37 +31,32 @@ export interface UsageInfo {
 }
 
 export class ElevenLabsClient {
-  private baseUrl = "https://api.elevenlabs.io/v1";
+  private baseUrl = 'https://api.elevenlabs.io/v1';
   private maxCharactersPerRequest = 1000; // Free tier safe limit
   private requestDelay = 3000; // 3 seconds between requests for free tier
   private lastRequestTime = 0;
 
   constructor(private config: ElevenLabsConfig) {
     if (!config.apiKey) {
-      throw new Error("ElevenLabs API key is required");
+      throw new Error('ElevenLabs API key is required');
     }
   }
 
-  async generateSpeech(
-    request: ElevenLabsRequest,
-    voiceId: string
-  ): Promise<Buffer> {
+  async generateSpeech(request: ElevenLabsRequest, voiceId: string): Promise<Buffer> {
     try {
       // Free tier rate limiting
       await this.enforceRateLimit();
-
+      
       // Free tier character limit check
       if (request.text.length > this.maxCharactersPerRequest) {
-        throw new Error(
-          `Text too long for free tier: ${request.text.length} chars (max: ${this.maxCharactersPerRequest})`
-        );
+        throw new Error(`Text too long for free tier: ${request.text.length} chars (max: ${this.maxCharactersPerRequest})`);
       }
 
       console.log(`Generating speech with ElevenLabs for voice: ${voiceId}`);
       console.log(`Text length: ${request.text.length} characters`);
-
+      
       const url = `${this.baseUrl}/text-to-speech/${voiceId}`;
-
+      
       const payload = {
         text: request.text,
         model_id: request.model_id || "eleven_monolingual_v1", // Free tier model
@@ -69,58 +64,51 @@ export class ElevenLabsClient {
           stability: 0.5,
           similarity_boost: 0.75,
           style: 0.0,
-          use_speaker_boost: true,
-        },
-      };
-      const response = await axios.post(url, payload, {
+          use_speaker_boost: true
+        }
+      };      const response = await axios.post(url, payload, {
         headers: {
-          Accept: "audio/mpeg",
-          "Content-Type": "application/json",
-          "xi-api-key": this.config.apiKey,
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': this.config.apiKey
         },
-        responseType: "arraybuffer",
+        responseType: 'arraybuffer'
       });
 
       const audioBuffer = Buffer.from(response.data);
       console.log(`✅ Generated audio: ${audioBuffer.length} bytes`);
-
-      return audioBuffer;
-    } catch (error: any) {
-      console.error("ElevenLabs API Error:", error);
-
+      
+      return audioBuffer;    } catch (error: any) {
+      console.error('ElevenLabs API Error:', error);
+      
       // Handle common free tier errors
       if (error.response?.status === 401) {
-        throw new Error("Invalid ElevenLabs API key");
+        throw new Error('Invalid ElevenLabs API key');
       } else if (error.response?.status === 429) {
-        throw new Error(
-          "Rate limit exceeded. Free tier allows 20 requests/minute"
-        );
-      } else if (
-        error.response?.status === 400 &&
-        error.response?.data?.detail?.includes("character")
-      ) {
-        throw new Error("Monthly character limit exceeded");
+        throw new Error('Rate limit exceeded. Free tier allows 20 requests/minute');
+      } else if (error.response?.status === 400 && error.response?.data?.detail?.includes('character')) {
+        throw new Error('Monthly character limit exceeded');
       }
-
+      
       throw new Error(`Failed to generate speech: ${error.message}`);
     }
   }
   async getAvailableVoices(): Promise<ElevenLabsVoice[]> {
     try {
       await this.enforceRateLimit();
-
+      
       const url = `${this.baseUrl}/voices`;
-
+      
       const response = await axios.get(url, {
         headers: {
-          Accept: "application/json",
-          "xi-api-key": this.config.apiKey,
-        },
+          'Accept': 'application/json',
+          'xi-api-key': this.config.apiKey
+        }
       });
 
       return response.data.voices || [];
     } catch (error: any) {
-      console.error("Error fetching voices:", error);
+      console.error('Error fetching voices:', error);
       throw new Error(`Failed to fetch voices: ${error.message}`);
     }
   }
@@ -128,32 +116,28 @@ export class ElevenLabsClient {
   async getUserInfo(): Promise<UsageInfo> {
     try {
       await this.enforceRateLimit();
-
+      
       const url = `${this.baseUrl}/user`;
-
+      
       const response = await fetch(url, {
-        method: "GET",
+        method: 'GET',
         headers: {
-          Accept: "application/json",
-          "xi-api-key": this.config.apiKey,
-        },
+          'Accept': 'application/json',
+          'xi-api-key': this.config.apiKey
+        }
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(
-          `ElevenLabs API error: ${response.status} - ${errorText}`
-        );
-      }
-      const data = (await response.json()) as any;
+        throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
+      }      const data = await response.json() as any;
       return {
         character_count: data.subscription?.character_count || 0,
         character_limit: data.subscription?.character_limit || 10000,
-        can_extend_character_limit:
-          data.subscription?.can_extend_character_limit || false,
+        can_extend_character_limit: data.subscription?.can_extend_character_limit || false
       };
     } catch (error) {
-      console.error("Error fetching user info:", error);
+      console.error('Error fetching user info:', error);
       throw new Error(`Failed to fetch user info: ${error}`);
     }
   }
@@ -166,27 +150,26 @@ export class ElevenLabsClient {
 
     const chunks: string[] = [];
     const sentences = text.split(/[.!?]+/);
-    let currentChunk = "";
+    let currentChunk = '';
 
     for (const sentence of sentences) {
       const trimmedSentence = sentence.trim();
       if (!trimmedSentence) continue;
 
-      const potentialChunk =
-        currentChunk + (currentChunk ? ". " : "") + trimmedSentence;
-
+      const potentialChunk = currentChunk + (currentChunk ? '. ' : '') + trimmedSentence;
+      
       if (potentialChunk.length <= this.maxCharactersPerRequest) {
         currentChunk = potentialChunk;
       } else {
         if (currentChunk) {
-          chunks.push(currentChunk + ".");
+          chunks.push(currentChunk + '.');
         }
         currentChunk = trimmedSentence;
       }
     }
 
     if (currentChunk) {
-      chunks.push(currentChunk + ".");
+      chunks.push(currentChunk + '.');
     }
 
     return chunks;
@@ -196,15 +179,13 @@ export class ElevenLabsClient {
   private async enforceRateLimit(): Promise<void> {
     const now = Date.now();
     const timeSinceLastRequest = now - this.lastRequestTime;
-
+    
     if (timeSinceLastRequest < this.requestDelay) {
       const waitTime = this.requestDelay - timeSinceLastRequest;
-      console.log(
-        `⏳ Rate limiting: waiting ${waitTime}ms for free tier compliance`
-      );
-      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      console.log(`⏳ Rate limiting: waiting ${waitTime}ms for free tier compliance`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-
+    
     this.lastRequestTime = Date.now();
   }
 
@@ -219,7 +200,7 @@ export class ElevenLabsClient {
       female: "21m00Tcm4TlvDq8ikWAM", // Rachel
     };
 
-    const normalizedCharacter = character.toLowerCase().replace(/\s+/g, "");
+    const normalizedCharacter = character.toLowerCase().replace(/\s+/g, '');
     return voiceMap[normalizedCharacter] || voiceMap["narrator"];
   }
 
