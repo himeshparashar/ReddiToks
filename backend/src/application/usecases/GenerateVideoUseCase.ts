@@ -163,10 +163,9 @@ export interface VideoGenerationProgress {
 
 // Factory function to create use case with all dependencies
 export function createGenerateVideoUseCase(): GenerateVideoUseCase {
-  // TODO: Get these from environment configuration
   const redditService = new RedditService();
-  const llmService = new LLMService("your-openai-api-key");
-  const ttsService = new TTSService("your-elevenlabs-api-key");
+  const llmService = new LLMService(); // Uses config internally
+  const ttsService = new TTSService(); // Will need to be updated to use config
   const remotionService = new RemotionService();
 
   return new GenerateVideoUseCase(
