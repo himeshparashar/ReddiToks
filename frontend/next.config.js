@@ -8,6 +8,9 @@ const nextConfig = {
   },
   images: { unoptimized: true },
   swcMinify: false,
+  output: 'export',
+  trailingSlash: true,
+  distDir: 'out',
 };
 
 module.exports = nextConfig;
