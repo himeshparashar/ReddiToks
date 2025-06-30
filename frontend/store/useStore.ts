@@ -54,6 +54,7 @@ interface AppState {
     id: string | null;
     progress: number;
     message: string;
+    videoUrl: string | null;
   };
   
   // User & Projects
@@ -75,6 +76,7 @@ interface AppState {
   setSubtitleStyle: (style: Partial<SubtitleStyle>) => void;
   setRenderStatus: (status: AppState['renderStatus']) => void;
   updateRenderProgress: (progress: number, message: string) => void;
+  setVideoUrl: (url: string) => void;
   setUser: (user: User | null) => void;
   addProject: (project: Project) => void;
   updateProject: (id: string, updates: Partial<Project>) => void;
@@ -102,7 +104,8 @@ export const useStore = create<AppState>((set, get) => ({
   currentRender: {
     id: null,
     progress: 0,
-    message: ''
+    message: '',
+    videoUrl: null
   },
   user: null,
   projects: [],
@@ -144,6 +147,10 @@ export const useStore = create<AppState>((set, get) => ({
     currentRender: { ...state.currentRender, progress, message }
   })),
   
+  setVideoUrl: (url) => set((state) => ({
+    currentRender: { ...state.currentRender, videoUrl: url }
+  })),
+  
   setUser: (user) => set({ user }),
   
   addProject: (project) => set((state) => ({
@@ -171,7 +178,7 @@ export const useStore = create<AppState>((set, get) => ({
     backgroundVideo: null,
     subtitleStyle: defaultSubtitleStyle,
     renderStatus: 'idle',
-    currentRender: { id: null, progress: 0, message: '' },
+    currentRender: { id: null, progress: 0, message: '', videoUrl: null },
     isCreating: false
   })
 }));

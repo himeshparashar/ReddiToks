@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare, Play, Pause, Edit3, Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,7 +28,7 @@ export default function ScriptEditor() {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
 
   // Auto-generate script from Reddit thread if empty
-  useState(() => {
+  useEffect(() => {
     if (redditThread && script.length === 0) {
       const generatedScript = [
         {
@@ -46,7 +46,7 @@ export default function ScriptEditor() {
       ];
       updateScript(generatedScript);
     }
-  });
+  }, [redditThread, script.length, updateScript]);
 
   const handleVoicePreview = (voiceId: string, lineId: string) => {
     setPlayingVoice(lineId);

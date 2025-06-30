@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Video, Upload, Play, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,14 @@ const categories = ['All', 'Default'];
 export default function VideoSelector() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
-  const { backgroundVideo, setBackgroundVideo, script } = useStore();
+  const { backgroundVideo, setBackgroundVideo, script, redditThread } = useStore();
+
+  // Auto-select the first background video when component mounts
+  useEffect(() => {
+    if (redditThread && !backgroundVideo && backgroundVideos.length > 0) {
+      setBackgroundVideo(backgroundVideos[0].id);
+    }
+  }, [redditThread, backgroundVideo, setBackgroundVideo]);
 
   const filteredVideos = selectedCategory === 'All' 
     ? backgroundVideos 
@@ -38,7 +45,7 @@ export default function VideoSelector() {
     setPreviewVideo(previewVideo === videoId ? null : videoId);
   };
 
-  if (script.length === 0) {
+  if (!redditThread) {
     return null;
   }
 

@@ -61,7 +61,7 @@ export default function CreatePage() {
             </motion.div>
           )}
 
-          {/* Step 3: Video Selector (only show if we have a script) */}
+          {/* Step 3: Video Selector (only show if we have a thread) */}
           {redditThread && (
             <motion.div
               initial={{ opacity: 0, x: -50 }}
