@@ -61,6 +61,26 @@ class App {
       this.generateVideoController.cancelGeneration.bind(this.generateVideoController)
     );
 
+    // Cleanup and management endpoints
+    apiRouter.delete("/cleanup/temp",
+      this.generateVideoController.cleanupTempFiles.bind(this.generateVideoController)
+    );
+    apiRouter.delete("/cleanup/temp/:scriptId",
+      this.generateVideoController.cleanupTempFiles.bind(this.generateVideoController)
+    );
+    apiRouter.delete("/videos/:scriptId",
+      this.generateVideoController.deleteVideo.bind(this.generateVideoController)
+    );
+    apiRouter.delete("/videos",
+      this.generateVideoController.deleteAllVideos.bind(this.generateVideoController)
+    );
+    apiRouter.get("/temp-files",
+      this.generateVideoController.listTempFiles.bind(this.generateVideoController)
+    );
+    apiRouter.get("/videos",
+      this.generateVideoController.listVideos.bind(this.generateVideoController)
+    );
+
     this.app.use("/api", apiRouter);
 
     // 404 handler
@@ -87,8 +107,16 @@ class App {
 
   public listen(): void {
     validateConfig();
-    this.app.listen(config.server.port, config.server.host, () => {
-      console.log(`🚀 Video Generation Service running on http://${config.server.host}:${config.server.port}`);
+    
+    // For deployment platforms like Render, Heroku, etc.
+    // Ensure port is always a number
+    const port = Number(process.env.PORT) || config.server.port;
+    const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : config.server.host;
+    
+    this.app.listen(port, host, () => {
+      console.log(`🚀 Video Generation Service running on http://${host}:${port}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🌐 CORS Origin: ${config.server.cors.origin}`);
     });
   }
 }

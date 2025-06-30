@@ -38,8 +38,8 @@ interface Config {
 
 const config: Config = {
   server: {
-    port: parseInt(process.env.PORT || "3001", 10),
-    host: process.env.HOST || "localhost",
+    port: Number(process.env.PORT) || 3001,
+    host: process.env.NODE_ENV === "production" ? "0.0.0.0" : "localhost", // Fix for deployment
     cors: {
       origin: process.env.CORS_ORIGIN || "http://localhost:3000",
       credentials: true,

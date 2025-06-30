@@ -130,4 +130,143 @@ export class GenerateVideoController {
       version: "1.0.0",
     });
   }
+
+  async cleanupTempFiles(req: Request, res: Response): Promise<void> {
+    try {
+      const scriptId = req.params.scriptId;
+      
+      if (!scriptId) {
+        res.status(400).json({
+          success: false,
+          error: "Script ID is required",
+          message: "Missing script ID parameter",
+        });
+        return;
+      }
+
+      await this.generateVideoUseCase.cleanupTempFiles(scriptId);
+
+      res.status(200).json({
+        success: true,
+        message: `Temporary files for script ${scriptId} cleaned up successfully`,
+      });
+    } catch (error) {
+      console.error("Cleanup temp files error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to cleanup temp files",
+        message: "Could not cleanup temporary files",
+      });
+    }
+  }
+
+  async cleanupAllTempFiles(req: Request, res: Response): Promise<void> {
+    try {
+      const result = await this.generateVideoUseCase.cleanupTempFiles(); // Clean up all temp files
+
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: "All temporary files cleaned up successfully",
+      });
+    } catch (error) {
+      console.error("Cleanup all temp files error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to cleanup all temp files",
+        message: "Could not cleanup all temporary files",
+      });
+    }
+  }
+
+  async deleteVideo(req: Request, res: Response): Promise<void> {
+    try {
+      const scriptId = req.params.scriptId;
+      
+      if (!scriptId) {
+        res.status(400).json({
+          success: false,
+          error: "Script ID is required",
+          message: "Missing script ID parameter",
+        });
+        return;
+      }
+
+      await this.generateVideoUseCase.deleteVideo(scriptId);
+
+      res.status(200).json({
+        success: true,
+        message: `Video for script ${scriptId} deleted successfully`,
+      });
+    } catch (error) {
+      console.error("Delete video error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to delete video",
+        message: "Could not delete video",
+      });
+    }
+  }
+
+  async deleteAllVideos(req: Request, res: Response): Promise<void> {
+    try {
+      await this.generateVideoUseCase.deleteAllVideos();
+
+      res.status(200).json({
+        success: true,
+        message: "All videos deleted successfully",
+      });
+    } catch (error) {
+      console.error("Delete all videos error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to delete all videos",
+        message: "Could not delete all videos",
+      });
+    }
+  }
+
+  async listTempFiles(req: Request, res: Response): Promise<void> {
+    try {
+      const tempFiles = await this.generateVideoUseCase.listTempFiles();
+
+      res.status(200).json({
+        success: true,
+        data: tempFiles,
+        message: "Temporary files listed successfully",
+      });
+    } catch (error) {
+      console.error("List temp files error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to list temp files",
+        message: "Could not list temporary files",
+      });
+    }
+  }
+
+  async listVideos(req: Request, res: Response): Promise<void> {
+    try {
+      const videos = await this.generateVideoUseCase.listVideos();
+
+      res.status(200).json({
+        success: true,
+        data: videos,
+        message: "Videos listed successfully",
+      });
+    } catch (error) {
+      console.error("List videos error:", error);
+
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to list videos",
+        message: "Could not list videos",
+      });
+    }
+  }
 }
