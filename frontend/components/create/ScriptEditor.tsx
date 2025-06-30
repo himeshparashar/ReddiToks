@@ -37,7 +37,7 @@ export default function ScriptEditor() {
           text: redditThread.title,
           voiceId: 'narrator',
         },
-        ...redditThread.comments.slice(0, 5).map((comment, index) => ({
+        ...redditThread.comments.slice(0, 2).map((comment, index) => ({
           id: (index + 2).toString(),
           speaker: comment.author || `User ${index + 1}`,
           text: comment.text,

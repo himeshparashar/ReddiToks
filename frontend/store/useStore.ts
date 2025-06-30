@@ -76,6 +76,7 @@ interface AppState {
   setSubtitleStyle: (style: Partial<SubtitleStyle>) => void;
   setRenderStatus: (status: AppState['renderStatus']) => void;
   updateRenderProgress: (progress: number, message: string) => void;
+  setRenderScriptId: (id: string) => void;
   setVideoUrl: (url: string) => void;
   setUser: (user: User | null) => void;
   addProject: (project: Project) => void;
@@ -145,6 +146,10 @@ export const useStore = create<AppState>((set, get) => ({
   
   updateRenderProgress: (progress, message) => set((state) => ({
     currentRender: { ...state.currentRender, progress, message }
+  })),
+  
+  setRenderScriptId: (id: string) => set((state) => ({
+    currentRender: { ...state.currentRender, id }
   })),
   
   setVideoUrl: (url) => set((state) => ({

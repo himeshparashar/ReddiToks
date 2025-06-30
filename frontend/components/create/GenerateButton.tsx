@@ -2,28 +2,25 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Clock, Users, Video, Download, Share2, ExternalLink } from 'lucide-react';
+import { Zap, Clock, Users, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { videoApi } from '@/lib/api';
+import { getVideoUrl, isVideoAccessible, logVideoStatus } from '@/lib/videoUtils';
 
 export default function GenerateButton() {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
-  const [currentMessage, setCurrentMessage] = useState('');
 
   const { 
     redditThread, 
     backgroundVideo, 
     renderStatus, 
     setRenderStatus, 
-    currentRender,
     setVideoUrl,
-    updateRenderProgress 
+    updateRenderProgress,
+    setRenderScriptId
   } = useStore();
 
   const canGenerate = redditThread && backgroundVideo === 'background-video';
@@ -36,8 +33,6 @@ export default function GenerateButton() {
 
     setIsGenerating(true);
     setRenderStatus('rendering');
-    setProgress(0);
-    setCurrentMessage('Preparing video generation...');
 
     try {
       // Make API call to generate video
@@ -57,15 +52,23 @@ export default function GenerateButton() {
       });
 
       if (response.success && response.data) {
-        // Start polling for progress if we get a scriptId
-        if (response.data.scriptId) {
-          await pollProgress(response.data.scriptId);
-        } else if (response.data.videoUrl) {
-          // Video is already complete
+        // Check if video is already complete (API returns videoUrl when done)
+        if (response.data.videoUrl) {
+          // Video is complete - use the provided video URL directly
+          console.log('Video generation completed immediately! Video URL:', response.data.videoUrl);
+          setRenderScriptId(response.data.scriptId);
           setVideoUrl(response.data.videoUrl);
-          setIsComplete(true);
+          updateRenderProgress(100, 'Video generated successfully!');
           setRenderStatus('completed');
           toast.success('Video generated successfully!');
+        } else if (response.data.scriptId) {
+          // Video is still processing - start polling
+          console.log('Starting progress polling for scriptId:', response.data.scriptId);
+          setRenderScriptId(response.data.scriptId);
+          updateRenderProgress(0, 'Video generation started...');
+          await pollProgress(response.data.scriptId);
+        } else {
+          throw new Error('No scriptId or videoUrl returned from API');
         }
       } else {
         throw new Error(response.error || 'Failed to generate video');
@@ -85,70 +88,78 @@ export default function GenerateButton() {
 
     const poll = async () => {
       try {
+        console.log(`Polling progress for scriptId: ${scriptId}, attempt: ${pollCount + 1}`);
         const progressResponse = await videoApi.getProgress(scriptId);
         
+        console.log('Progress response:', progressResponse);
+        
         if (progressResponse.success && progressResponse.data) {
-          const { status, progress: apiProgress, message, videoUrl } = progressResponse.data;
+          const { 
+            currentStep, 
+            stepProgress, 
+            overallProgress, 
+            estimatedTimeRemaining, 
+            message, 
+            status,
+            videoUrl 
+          } = progressResponse.data;
           
-          setProgress(apiProgress);
-          setCurrentMessage(message);
-          updateRenderProgress(apiProgress, message);
+          console.log(`Status: ${status || currentStep}, Progress: ${overallProgress}%, Step: ${currentStep}, Message: ${message}`);
+          
+          updateRenderProgress(overallProgress || 0, message || `${currentStep}...`);
 
-          if (status === 'completed' && videoUrl) {
-            setVideoUrl(videoUrl);
-            setIsComplete(true);
+          // Check if video generation is complete
+          // Backend might not include "status" field, so check if currentStep indicates completion
+          const isComplete = status === 'completed' || 
+                            currentStep === 'completed' || 
+                            currentStep === 'done' ||
+                            overallProgress >= 100;
+
+          if (isComplete) {
+            // Video is complete - construct the video URL if not provided
+            let finalVideoUrl = videoUrl;
+            if (!finalVideoUrl) {
+              // Construct the video URL based on the pattern /videos/scriptId.mp4
+              finalVideoUrl = getVideoUrl(scriptId);
+            }
+            
+            console.log('Video generation completed! Video URL:', finalVideoUrl);
+            logVideoStatus(scriptId, { currentStep, finalVideoUrl, overallProgress });
+            
+            // Set the video URL and mark as completed
+            setVideoUrl(finalVideoUrl);
+            setIsGenerating(false);
             setRenderStatus('completed');
             toast.success('Video generated successfully!');
-            return;
-          } else if (status === 'error') {
-            throw new Error('Video generation failed');
-          } else if (pollCount < maxPolls) {
-            // Continue polling
-            pollCount++;
-            setTimeout(poll, 5000); // Poll every 5 seconds
+            return; // Stop polling
+            
+          } else if (currentStep === 'error' || currentStep === 'failed') {
+            throw new Error(message || 'Video generation failed');
+            
           } else {
-            throw new Error('Video generation timed out');
+            // Continue polling - video is still being processed
+            if (pollCount < maxPolls) {
+              pollCount++;
+              setTimeout(poll, 5000); // Poll every 5 seconds
+            } else {
+              throw new Error('Video generation timed out after 10 minutes');
+            }
           }
         } else {
-          throw new Error('Failed to get progress');
+          throw new Error(progressResponse.error || 'Failed to get progress');
         }
       } catch (error) {
         console.error('Progress polling error:', error);
+        setIsGenerating(false);
         setRenderStatus('error');
-        toast.error('Failed to track video progress');
+        toast.error(`Failed to track video progress: ${error}`);
       }
     };
 
     setTimeout(poll, 2000); // Start polling after 2 seconds
   };
 
-  const handleDownload = () => {
-    if (currentRender.videoUrl) {
-      window.open(currentRender.videoUrl, '_blank');
-      toast.success('Download started!');
-    } else {
-      toast.error('No video available for download');
-    }
-  };
-
-  const handleShare = () => {
-    if (currentRender.videoUrl) {
-      navigator.clipboard.writeText(currentRender.videoUrl);
-      toast.success('Video link copied to clipboard!');
-    } else {
-      toast.error('No video URL to share');
-    }
-  };
-
-  const resetGeneration = () => {
-    setIsComplete(false);
-    setIsGenerating(false);
-    setProgress(0);
-    setCurrentMessage('');
-    setRenderStatus('idle');
-  };
-
-  if (!canGenerate && !isGenerating && !isComplete) {
+  if (!canGenerate) {
     return (
       <Card className="glass border-gray-700/50 opacity-50">
         <CardContent className="p-8 text-center">
@@ -162,148 +173,9 @@ export default function GenerateButton() {
     );
   }
 
-  if (isComplete) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
-      >
-        {/* Success Card */}
-        <Card className="glass border-green-500/30 bg-green-500/5">
-          <CardContent className="p-8 text-center">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", duration: 0.6 }}
-              className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <Video className="h-8 w-8 text-white" />
-            </motion.div>
-            
-            <h3 className="text-2xl font-bold text-white mb-2">Video Generated!</h3>
-            <p className="text-gray-300 mb-6">
-              Your Reddit thread has been transformed into a viral-ready video.
-            </p>
-
-            {/* Video Preview */}
-            <div className="aspect-[9/16] max-w-xs mx-auto bg-gray-800 rounded-lg overflow-hidden mb-6">
-              {currentRender.videoUrl ? (
-                <div className="w-full h-full relative">
-                  <video 
-                    src={currentRender.videoUrl} 
-                    controls 
-                    className="w-full h-full object-cover"
-                    poster="/api/placeholder/300/533"
-                  >
-                    Your browser does not support the video tag.
-                  </video>
-                  <div className="absolute top-2 right-2">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => window.open(currentRender.videoUrl!, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <Video className="h-12 w-12 text-green-400 mx-auto mb-2" />
-                    <p className="text-green-400 font-medium">Video Preview</p>
-                    <p className="text-xs text-gray-400">Processing...</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button onClick={handleDownload} className="btn-primary">
-                <Download className="h-4 w-4 mr-2" />
-                Download Video
-              </Button>
-              <Button onClick={handleShare} variant="outline" className="btn-secondary">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share Link
-              </Button>
-            </div>
-
-            {/* Create Another */}
-            <Button
-              onClick={resetGeneration}
-              variant="ghost"
-              className="mt-4 text-gray-400 hover:text-green-400"
-            >
-              Create Another Video
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[
-            { icon: Clock, label: 'Status', value: 'Complete' },
-            { icon: Users, label: 'Quality', value: 'HD' },
-            { icon: Video, label: 'Format', value: 'MP4' },
-          ].map((stat, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 + index * 0.1 }}
-              className="glass rounded-lg p-4 text-center"
-            >
-              <stat.icon className="h-6 w-6 text-green-400 mx-auto mb-2" />
-              <div className="text-lg font-semibold text-white">{stat.value}</div>
-              <div className="text-sm text-gray-400">{stat.label}</div>
-            </motion.div>
-          ))}
-        </div>
-      </motion.div>
-    );
-  }
-
-  if (isGenerating) {
-    return (
-      <Card className="glass border-green-500/30">
-        <CardContent className="p-8">
-          <div className="text-center mb-8">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-              className="w-16 h-16 bg-gradient-to-r from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
-            >
-              <Zap className="h-8 w-8 text-white" />
-            </motion.div>
-            
-            <h3 className="text-2xl font-bold text-white mb-2">Generating Your Video</h3>
-            <p className="text-gray-300">
-              {currentMessage || 'Processing your request...'}
-            </p>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="space-y-4">
-            <Progress value={progress} className="h-3" />
-            <div className="flex justify-between text-sm text-gray-400">
-              <span>Processing...</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-          </div>
-
-          {/* Current Status */}
-          <div className="mt-8 p-4 bg-gray-800/30 rounded-lg border border-gray-700">
-            <div className="flex items-center space-x-3 text-white">
-              <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-sm">{currentMessage || 'Initializing...'}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (renderStatus === 'rendering' || renderStatus === 'completed') {
+    // VideoViewer handles the rendering and completed states
+    return null;
   }
 
   return (
@@ -333,11 +205,11 @@ export default function GenerateButton() {
 
         <Button
           onClick={handleGenerate}
-          disabled={!canGenerate}
+          disabled={!canGenerate || isGenerating}
           className="btn-primary text-xl px-12 py-6 h-auto"
         >
           <Zap className="h-6 w-6 mr-3" />
-          Generate Video
+          {isGenerating ? 'Generating...' : 'Generate Video'}
         </Button>
         
         <p className="text-gray-400 text-sm mt-4">

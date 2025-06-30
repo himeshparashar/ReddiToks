@@ -13,7 +13,7 @@ const steps = [
 ];
 
 export default function CreationProgress() {
-  const { redditThread, script, backgroundVideo } = useStore();
+  const { redditThread, script, backgroundVideo, renderStatus, currentRender } = useStore();
 
   const getStepStatus = (stepKey: string) => {
     switch (stepKey) {
@@ -24,7 +24,10 @@ export default function CreationProgress() {
       case 'style':
         return !redditThread || script.length === 0 ? 'pending' : backgroundVideo ? 'completed' : 'current';
       case 'generate':
-        return !redditThread || script.length === 0 || !backgroundVideo ? 'pending' : 'current';
+        if (!redditThread || script.length === 0 || !backgroundVideo) return 'pending';
+        if (renderStatus === 'completed') return 'completed';
+        if (renderStatus === 'rendering') return 'current';
+        return 'current';
       default:
         return 'pending';
     }

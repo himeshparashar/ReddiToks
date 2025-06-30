@@ -60,8 +60,7 @@ export default function RedditInputCard() {
         url: url,
         comments: [
           { author: "user1", text: "Sample comment 1" },
-          { author: "user2", text: "Sample comment 2" },
-          { author: "user3", text: "Sample comment 3" }
+          { author: "user2", text: "Sample comment 2" }
         ],
         author: "RedditUser",
         upvotes: 1000
@@ -84,8 +83,7 @@ export default function RedditInputCard() {
         url: `https://reddit.com${post.subreddit}/comments/example`,
         comments: [
           { author: "user1", text: "This is so relatable!" },
-          { author: "user2", text: "I can't believe this actually happened" },
-          { author: "user3", text: "Plot twist incoming..." }
+          { author: "user2", text: "I can't believe this actually happened" }
         ],
         author: "RedditUser",
         upvotes: parseInt(post.upvotes.replace('k', '000'))
