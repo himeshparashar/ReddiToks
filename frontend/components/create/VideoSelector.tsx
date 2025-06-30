@@ -11,50 +11,15 @@ import { cn } from '@/lib/utils';
 
 const backgroundVideos = [
   {
-    id: 'minecraft-parkour',
-    name: 'Minecraft Parkour',
+    id: 'background-video',
+    name: 'Background Video',
     thumbnail: 'https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Gaming',
+    category: 'Default',
     duration: '10:00',
-  },
-  {
-    id: 'subway-surfers',
-    name: 'Subway Surfers',
-    thumbnail: 'https://images.pexels.com/photos/1040160/pexels-photo-1040160.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Gaming',
-    duration: '15:00',
-  },
-  {
-    id: 'satisfying-slime',
-    name: 'Satisfying Slime',
-    thumbnail: 'https://images.pexels.com/photos/3651597/pexels-photo-3651597.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Satisfying',
-    duration: '8:00',
-  },
-  {
-    id: 'cooking-asmr',
-    name: 'Cooking ASMR',
-    thumbnail: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'ASMR',
-    duration: '12:00',
-  },
-  {
-    id: 'nature-timelapse',
-    name: 'Nature Timelapse',
-    thumbnail: 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Nature',
-    duration: '20:00',
-  },
-  {
-    id: 'city-drive',
-    name: 'City Drive POV',
-    thumbnail: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'POV',
-    duration: '25:00',
   },
 ];
 
-const categories = ['All', 'Gaming', 'Satisfying', 'ASMR', 'Nature', 'POV'];
+const categories = ['All', 'Default'];
 
 export default function VideoSelector() {
   const [selectedCategory, setSelectedCategory] = useState('All');

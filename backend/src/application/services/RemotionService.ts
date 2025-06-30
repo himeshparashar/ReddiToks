@@ -176,8 +176,9 @@ export class RemotionService implements RemotionServiceInterface {
         console.warn(`⚠️ Could not analyze background video, using default duration: ${error}`);
       }
       
-      // Alternative approach: Use CLI for more straightforward rendering
-      const remotionEntryPoint = path.join(__dirname, "../../remotion/Root.tsx");
+      // Fix: Use the correct entry point that calls registerRoot
+      // Use the source file directly, not the compiled version
+      const remotionEntryPoint = path.resolve(process.cwd(), "src/remotion/Root.tsx");
       const compositionId = "RedditVideo";
       
       // Create a temporary input props file
@@ -238,7 +239,7 @@ export class RemotionService implements RemotionServiceInterface {
         console.log(`📊 Final progress: ${progressLines[progressLines.length - 1]}`);
       }
       
-      console.log(`� Remotion output: ${stdout}`);
+      console.log(`📺 Remotion output: ${stdout}`);
       
       // Verify the output file was created
       if (!await fs.pathExists(outputPath)) {

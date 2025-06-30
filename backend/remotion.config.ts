@@ -11,3 +11,6 @@ Config.setConcurrency(1);
 
 // Enable logging
 Config.setLevel('info');
+
+// Set the correct entry point
+Config.setEntryPoint('./src/remotion/Root.tsx');
