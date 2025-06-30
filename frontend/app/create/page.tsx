@@ -8,9 +8,10 @@ import ScriptEditor from '@/components/create/ScriptEditor';
 import VideoSelector from '@/components/create/VideoSelector';
 import GenerateButton from '@/components/create/GenerateButton';
 import CreationProgress from '@/components/create/CreationProgress';
+import VideoViewer from '@/components/create/VideoViewer';
 
 export default function CreatePage() {
-  const { setIsCreating, isCreating, redditThread } = useStore();
+  const { setIsCreating, isCreating, redditThread, renderStatus, currentRender } = useStore();
 
   useEffect(() => {
     setIsCreating(true);
@@ -61,7 +62,7 @@ export default function CreatePage() {
             </motion.div>
           )}
 
-          {/* Step 3: Video Selector (only show if we have a script) */}
+          {/* Step 3: Video Selector (only show if we have a thread) */}
           {redditThread && (
             <motion.div
               initial={{ opacity: 0, x: -50 }}
@@ -83,6 +84,9 @@ export default function CreatePage() {
             </motion.div>
           )}
         </div>
+
+        {/* Video Viewer - Shows progress during generation and video when complete */}
+        <VideoViewer />
       </div>
     </div>
   );

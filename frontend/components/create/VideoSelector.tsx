@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Video, Upload, Play, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,57 +9,58 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useStore } from '@/store/useStore';
 import { cn } from '@/lib/utils';
 
+// Get API URL with fallback
+const getApiUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Try to get from environment first
+    const envUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (envUrl) {
+      console.log('Using environment API URL:', envUrl);
+      return envUrl;
+    }
+    
+    // Fallback to localhost
+    console.log('Using fallback API URL: http://localhost:3001');
+    return 'http://localhost:3001';
+  }
+  return 'http://localhost:3001';
+};
+
+const API_BASE_URL = getApiUrl();
+
+// For testing, let's also try a direct URL
+const DIRECT_VIDEO_URL = 'http://localhost:3001/background-video.mp4';
+
 const backgroundVideos = [
   {
-    id: 'minecraft-parkour',
-    name: 'Minecraft Parkour',
-    thumbnail: 'https://images.pexels.com/photos/442576/pexels-photo-442576.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Gaming',
+    id: 'background-video',
+    name: 'Background Video',
+    thumbnail: `${API_BASE_URL}/background-video.mp4`,
+    videoUrl: DIRECT_VIDEO_URL, // Use direct URL for testing
+    category: 'Default',
     duration: '10:00',
-  },
-  {
-    id: 'subway-surfers',
-    name: 'Subway Surfers',
-    thumbnail: 'https://images.pexels.com/photos/1040160/pexels-photo-1040160.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Gaming',
-    duration: '15:00',
-  },
-  {
-    id: 'satisfying-slime',
-    name: 'Satisfying Slime',
-    thumbnail: 'https://images.pexels.com/photos/3651597/pexels-photo-3651597.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Satisfying',
-    duration: '8:00',
-  },
-  {
-    id: 'cooking-asmr',
-    name: 'Cooking ASMR',
-    thumbnail: 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'ASMR',
-    duration: '12:00',
-  },
-  {
-    id: 'nature-timelapse',
-    name: 'Nature Timelapse',
-    thumbnail: 'https://images.pexels.com/photos/417074/pexels-photo-417074.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'Nature',
-    duration: '20:00',
-  },
-  {
-    id: 'city-drive',
-    name: 'City Drive POV',
-    thumbnail: 'https://images.pexels.com/photos/2116475/pexels-photo-2116475.jpeg?auto=compress&cs=tinysrgb&w=400',
-    category: 'POV',
-    duration: '25:00',
   },
 ];
 
-const categories = ['All', 'Gaming', 'Satisfying', 'ASMR', 'Nature', 'POV'];
+const categories = ['All', 'Default'];
 
 export default function VideoSelector() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [previewVideo, setPreviewVideo] = useState<string | null>(null);
-  const { backgroundVideo, setBackgroundVideo, script } = useStore();
+  const { backgroundVideo, setBackgroundVideo, script, redditThread } = useStore();
+
+  // Debug: Log the video URL
+  useEffect(() => {
+    console.log('VideoSelector - API_BASE_URL:', API_BASE_URL);
+    console.log('VideoSelector - backgroundVideos:', backgroundVideos);
+  }, []);
+
+  // Auto-select the first background video when component mounts
+  useEffect(() => {
+    if (redditThread && !backgroundVideo && backgroundVideos.length > 0) {
+      setBackgroundVideo(backgroundVideos[0].id);
+    }
+  }, [redditThread, backgroundVideo, setBackgroundVideo]);
 
   const filteredVideos = selectedCategory === 'All' 
     ? backgroundVideos 
@@ -73,7 +74,7 @@ export default function VideoSelector() {
     setPreviewVideo(previewVideo === videoId ? null : videoId);
   };
 
-  if (script.length === 0) {
+  if (!redditThread) {
     return null;
   }
 
@@ -132,11 +133,36 @@ export default function VideoSelector() {
                 >
                   {/* Thumbnail */}
                   <div className="relative aspect-[9/16] bg-gray-800 overflow-hidden">
-                    <img
-                      src={video.thumbnail}
-                      alt={video.name}
+                    <video
+                      src={video.videoUrl}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      muted
+                      playsInline
+                      preload="metadata"
+                      onLoadStart={() => console.log('Video loading started:', video.videoUrl)}
+                      onLoadedData={() => console.log('Video loaded:', video.videoUrl)}
+                      onError={(e) => {
+                        console.error('Video error:', e);
+                        console.error('Video URL:', video.videoUrl);
+                      }}
+                      onMouseEnter={(e) => {
+                        const videoEl = e.target as HTMLVideoElement;
+                        console.log('Mouse enter, attempting to play video');
+                        videoEl.currentTime = 0;
+                        videoEl.play().catch(err => {
+                          console.error('Failed to play video on hover:', err);
+                        });
+                      }}
+                      onMouseLeave={(e) => {
+                        const videoEl = e.target as HTMLVideoElement;
+                        videoEl.pause();
+                      }}
                     />
+                    
+                    {/* Fallback image if video fails */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center opacity-50">
+                      <Video className="h-12 w-12 text-white/50" />
+                    </div>
                     
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all duration-300" />
@@ -222,11 +248,34 @@ export default function VideoSelector() {
             animate={{ opacity: 1, y: 0 }}
             className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg"
           >
-            <div className="flex items-center text-green-400">
-              <Check className="h-5 w-5 mr-2" />
-              <span className="font-medium">
-                Background selected: {backgroundVideos.find(v => v.id === backgroundVideo)?.name}
-              </span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center text-green-400">
+                <Check className="h-5 w-5 mr-2" />
+                <span className="font-medium">
+                  Background selected: {backgroundVideos.find(v => v.id === backgroundVideo)?.name}
+                </span>
+              </div>
+              
+              {/* Video Preview */}
+              <div className="w-24 h-16 rounded-lg overflow-hidden border border-green-500/50 bg-gray-800">
+                <video
+                  src={backgroundVideos.find(v => v.id === backgroundVideo)?.videoUrl}
+                  className="w-full h-full object-cover"
+                  muted
+                  loop
+                  autoPlay
+                  playsInline
+                  onError={(e) => {
+                    console.error('Preview video error:', e);
+                    const target = e.target as HTMLVideoElement;
+                    target.style.display = 'none';
+                  }}
+                />
+                {/* Fallback */}
+                <div className="w-full h-full flex items-center justify-center">
+                  <Video className="h-6 w-6 text-green-400" />
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

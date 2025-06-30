@@ -1,3 +1,5 @@
+import { fetchRedditPostFromUrl } from '../../redditFetcher';
+
 export interface RawThreadData {
   title: string;
   url: string;
@@ -22,13 +24,61 @@ export interface RedditServiceInterface {
 
 export class RedditService implements RedditServiceInterface {
   constructor() {}
+  
   async fetchPostData(url: string): Promise<RawThreadData> {
-    // Mock implementation - returning fake Reddit data
     console.log(`Fetching Reddit post data from: ${url}`);
 
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Validate Reddit URL
+      if (!this.validateRedditUrl(url)) {
+        throw new Error('Invalid Reddit URL format');
+      }
 
+      // Use the actual Reddit fetcher
+      const redditData = await fetchRedditPostFromUrl(url);
+      
+      console.log('Raw Reddit data:', JSON.stringify(redditData, null, 2));
+
+      // Extract subreddit from URL
+      const subredditMatch = url.match(/\/r\/(\w+)\//);
+      const subreddit = subredditMatch ? subredditMatch[1] : 'unknown';
+
+      // Transform the data to match our interface
+      const transformedData: RawThreadData = {
+        title: redditData.title,
+        url: url,
+        author: 'OP', // The fetchRedditPostFromUrl doesn't return author, so we'll use 'OP'
+        content: redditData.body || redditData.title, // Use body if available, fallback to title
+        comments: this.transformComments(redditData.comments || []),
+        upvotes: 0, // The fetchRedditPostFromUrl doesn't return upvotes
+        subreddit: subreddit,
+      };
+
+      console.log('Transformed Reddit data:', JSON.stringify(transformedData, null, 2));
+      console.log(`Successfully fetched Reddit data: ${transformedData.title}`);
+      return transformedData;
+
+    } catch (error) {
+      console.error('Error fetching Reddit data:', error);
+      
+      // Fallback to mock data if Reddit fetch fails
+      console.log('Falling back to mock Reddit data due to fetch error');
+      return this.getMockData(url);
+    }
+  }
+
+  private transformComments(comments: string[]): RawComment[] {
+    // Transform the simple string array to our RawComment format
+    return comments.slice(0, 5).map((comment, index) => ({
+      author: `User${index + 1}`,
+      content: comment,
+      upvotes: Math.floor(Math.random() * 500) + 50, // Random upvotes
+      depth: 0,
+      replies: []
+    }));
+  }
+
+  private getMockData(url: string): RawThreadData {
     return {
       title: "AITA for telling my roommate that her cooking smells terrible?",
       url: url,
@@ -42,15 +92,7 @@ export class RedditService implements RedditServiceInterface {
             "NTA - You have a right to feel comfortable in your own home. Maybe you could suggest she use the kitchen fan or cook when you're not around?",
           upvotes: 245,
           depth: 0,
-          replies: [
-            {
-              author: "ThrowawayUser123",
-              content:
-                "Thanks for the suggestion! I didn't think about the timing aspect.",
-              upvotes: 89,
-              depth: 1,
-            },
-          ],
+          replies: []
         },
         {
           author: "CookingExpert",

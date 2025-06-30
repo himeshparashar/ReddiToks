@@ -1,0 +1,5 @@
+{
+  "cli": {
+    "Config": "./src/remotion/remotion.config.js"
+  }
+}

@@ -52,22 +52,25 @@ export default function RedditInputCard() {
 
     setIsLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // For now, just validate URL and set the thread
+      // In a real implementation, you'd fetch the thread data
       setRedditThread({
-        title: "What's the weirdest thing you've seen in someone else's house?",
+        title: "Reddit Thread",
         url: url,
         comments: [
-          { author: "user1", text: "I once saw a life-size cardboard cutout of Danny DeVito in someone's living room" },
-          { author: "user2", text: "My friend's mom had a shrine dedicated to Nicolas Cage movies" },
-          { author: "user3", text: "Walked into a bathroom that was completely covered in rubber ducks" }
+          { author: "user1", text: "Sample comment 1" },
+          { author: "user2", text: "Sample comment 2" }
         ],
-        author: "AskRedditBot",
-        upvotes: 12500
+        author: "RedditUser",
+        upvotes: 1000
       });
-      setIsLoading(false);
       toast.success('Reddit thread loaded successfully!');
-    }, 2000);
+    } catch (error) {
+      toast.error('Failed to load Reddit thread');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleTrendingSelect = (post: any) => {
@@ -80,8 +83,7 @@ export default function RedditInputCard() {
         url: `https://reddit.com${post.subreddit}/comments/example`,
         comments: [
           { author: "user1", text: "This is so relatable!" },
-          { author: "user2", text: "I can't believe this actually happened" },
-          { author: "user3", text: "Plot twist incoming..." }
+          { author: "user2", text: "I can't believe this actually happened" }
         ],
         author: "RedditUser",
         upvotes: parseInt(post.upvotes.replace('k', '000'))

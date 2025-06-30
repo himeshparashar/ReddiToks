@@ -43,6 +43,7 @@ export class LLMService implements LLMServiceInterface {
     rawThread: RawThreadData
   ): Promise<ScriptEntity> {
     console.log(`Generating structured script for thread: ${rawThread.title}`);
+    console.log('Thread data:', JSON.stringify(rawThread, null, 2));
 
     try {
       // Build the prompt for Gemini

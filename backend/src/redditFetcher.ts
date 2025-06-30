@@ -30,7 +30,7 @@ export const fetchRedditPostFromUrl = async (url: string): Promise<any> => {
 
   try {
     const post: any = reddit.getSubmission(postId);
-    const postData = await post.fetch();  
+    await post.fetch();  // Ensure post is fully loaded
 
     const comments: any[] = await post.comments;
 

@@ -9,6 +9,8 @@ import {
   RemotionServiceInterface,
 } from "../services/RemotionService";
 import { ScriptEntity } from "../../domain/entities/Script";
+import * as fs from "fs-extra";
+import * as path from "path";
 
 export interface GenerateVideoRequest {
   redditUrl: string;
@@ -24,6 +26,15 @@ export interface VideoGenerationOptions {
     speed?: number;
     pitch?: number;
   };
+}
+
+export interface VideoGenerationProgress {
+  scriptId: string;
+  currentStep: "reddit" | "llm" | "tts" | "render";
+  stepProgress: number; // 0-100
+  overallProgress: number; // 0-100
+  estimatedTimeRemaining?: number;
+  message?: string;
 }
 
 export interface GenerateVideoResponse {
@@ -150,23 +161,183 @@ export class GenerateVideoUseCase {
 
     console.log(`Video generation cancelled for script: ${scriptId}`);
   }
-}
 
-export interface VideoGenerationProgress {
-  scriptId: string;
-  currentStep: "reddit" | "llm" | "tts" | "render";
-  stepProgress: number; // 0-100
-  overallProgress: number; // 0-100
-  estimatedTimeRemaining?: number;
-  message?: string;
+  async cleanupTempFiles(scriptId?: string): Promise<{ deletedFiles: string[], message: string }> {
+    console.log(`Cleaning up temp files${scriptId ? ` for script: ${scriptId}` : ''}`);
+    
+    const tempDir = './temp';
+    const deletedFiles: string[] = [];
+
+    try {
+      if (scriptId) {
+        // Clean up specific script's temp files
+        const scriptTempDir = path.join(tempDir, scriptId);
+        if (await fs.pathExists(scriptTempDir)) {
+          await fs.remove(scriptTempDir);
+          deletedFiles.push(scriptTempDir);
+          console.log(`✅ Deleted temp directory: ${scriptTempDir}`);
+        }
+      } else {
+        // Clean up all temp files
+        if (await fs.pathExists(tempDir)) {
+          const files = await fs.readdir(tempDir);
+          for (const file of files) {
+            const filePath = path.join(tempDir, file);
+            await fs.remove(filePath);
+            deletedFiles.push(filePath);
+            console.log(`✅ Deleted: ${filePath}`);
+          }
+        }
+      }
+
+      return {
+        deletedFiles,
+        message: scriptId 
+          ? `Cleaned up temp files for script: ${scriptId}`
+          : `Cleaned up all temp files (${deletedFiles.length} items)`
+      };
+    } catch (error) {
+      console.error(`❌ Error cleaning up temp files:`, error);
+      throw new Error(`Failed to cleanup temp files: ${error}`);
+    }
+  }
+
+  async deleteVideo(scriptId: string): Promise<{ success: boolean, message: string }> {
+    console.log(`Deleting video for script: ${scriptId}`);
+    
+    const publicDir = './public';
+    
+    try {
+      // Delete video file
+      const videoPath = path.join(publicDir, 'videos', `${scriptId}.mp4`);
+      if (await fs.pathExists(videoPath)) {
+        await fs.remove(videoPath);
+        console.log(`✅ Deleted video: ${videoPath}`);
+      }
+
+      // Delete associated audio files
+      const audioDir = path.join(publicDir, 'audio', scriptId);
+      if (await fs.pathExists(audioDir)) {
+        await fs.remove(audioDir);
+        console.log(`✅ Deleted audio directory: ${audioDir}`);
+      }
+
+      // Cleanup temp files for this script
+      await this.cleanupTempFiles(scriptId);
+
+      return {
+        success: true,
+        message: `Successfully deleted video and associated files for script: ${scriptId}`
+      };
+    } catch (error) {
+      console.error(`❌ Error deleting video:`, error);
+      throw new Error(`Failed to delete video: ${error}`);
+    }
+  }
+
+  async deleteAllVideos(): Promise<{ deletedCount: number, message: string }> {
+    console.log(`Deleting all videos and associated files`);
+    
+    const publicDir = './public';
+    let deletedCount = 0;
+    
+    try {
+      // Delete all videos
+      const videosDir = path.join(publicDir, 'videos');
+      if (await fs.pathExists(videosDir)) {
+        const videoFiles = await fs.readdir(videosDir);
+        for (const file of videoFiles) {
+          if (file.endsWith('.mp4')) {
+            await fs.remove(path.join(videosDir, file));
+            deletedCount++;
+            console.log(`✅ Deleted video: ${file}`);
+          }
+        }
+      }
+
+      // Delete all audio files
+      const audioDir = path.join(publicDir, 'audio');
+      if (await fs.pathExists(audioDir)) {
+        await fs.remove(audioDir);
+        console.log(`✅ Deleted all audio files`);
+      }
+
+      // Cleanup all temp files
+      await this.cleanupTempFiles();
+
+      return {
+        deletedCount,
+        message: `Successfully deleted ${deletedCount} videos and all associated files`
+      };
+    } catch (error) {
+      console.error(`❌ Error deleting all videos:`, error);
+      throw new Error(`Failed to delete all videos: ${error}`);
+    }
+  }
+
+  async listTempFiles(): Promise<{ tempFiles: string[], totalSize: number }> {
+    const tempDir = './temp';
+    const tempFiles: string[] = [];
+    let totalSize = 0;
+
+    try {
+      if (await fs.pathExists(tempDir)) {
+        const items = await fs.readdir(tempDir);
+        for (const item of items) {
+          const itemPath = path.join(tempDir, item);
+          const stats = await fs.stat(itemPath);
+          tempFiles.push(item);
+          totalSize += stats.size;
+        }
+      }
+
+      return {
+        tempFiles,
+        totalSize: Math.round(totalSize / 1024 / 1024 * 100) / 100 // MB
+      };
+    } catch (error) {
+      console.error(`❌ Error listing temp files:`, error);
+      throw new Error(`Failed to list temp files: ${error}`);
+    }
+  }
+
+  async listVideos(): Promise<{ videos: Array<{ name: string, size: number, created: Date }>, totalCount: number }> {
+    const publicDir = './public';
+    const videos: Array<{ name: string, size: number, created: Date }> = [];
+
+    try {
+      const videosDir = path.join(publicDir, 'videos');
+      if (await fs.pathExists(videosDir)) {
+        const files = await fs.readdir(videosDir);
+        for (const file of files) {
+          if (file.endsWith('.mp4')) {
+            const filePath = path.join(videosDir, file);
+            const stats = await fs.stat(filePath);
+            videos.push({
+              name: file,
+              size: Math.round(stats.size / 1024 / 1024 * 100) / 100, // MB
+              created: stats.birthtime
+            });
+          }
+        }
+      }
+
+      return {
+        videos: videos.sort((a, b) => b.created.getTime() - a.created.getTime()),
+        totalCount: videos.length
+      };
+    } catch (error) {
+      console.error(`❌ Error listing videos:`, error);
+      throw new Error(`Failed to list videos: ${error}`);
+    }
+  }
 }
 
 // Factory function to create use case with all dependencies
 export function createGenerateVideoUseCase(): GenerateVideoUseCase {
-  // TODO: Get these from environment configuration
   const redditService = new RedditService();
-  const llmService = new LLMService("your-openai-api-key");
-  const ttsService = new TTSService("your-elevenlabs-api-key");
+  const llmService = new LLMService(); // Uses config internally
+  const ttsService = new TTSService(); // Will need to be updated to use config
   const remotionService = new RemotionService();
 
   return new GenerateVideoUseCase(
